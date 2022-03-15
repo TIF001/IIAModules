@@ -23,7 +23,7 @@ class module:
 class area:
     name: str
     desc: str  # Description
-    codes: list[str]  # Relevant modules (codes)
+    codes: list()  # Relevant modules (codes)
     eligible: bool = False  # Eligibility based on modules already selected
 
 
@@ -39,6 +39,7 @@ def importer():  # Reads the two csv files and stores their content in the globa
     with open(scriptPath.joinpath('Areas.csv'), newline='') as csvfile:  # Read the areas
         reader = csv.reader(csvfile, delimiter=',')
         for row in reader:
+            row = [r for r in row if r != ""]  # remove empty columns from end of line
             areas.append(area(row[0], row[1], row[2:]))
 
 
@@ -94,11 +95,14 @@ def createButtons():  # Creates both types of buttons
 
 
 def onmButtonPress(i):  # This gets called, when a module button is pressed
-    # Add or remove module from selected
-    if modules[i] in selected:
-        selected.remove(modules[i])
-    else:
-        selected.append(modules[i])
+
+    # Add or remove each module with the same code as the one clicked
+    for m in modules:
+        if modules[i].code == m.code:
+            if m in selected:
+                selected.remove(m)
+            else:
+                selected.append(m)
 
     # Refresh the button colors, availability and qualifications
     refresh()
@@ -173,12 +177,10 @@ def availability():  # Check which module can be selected based on the rules
             if m in selected:  # remove from selected if it becomes unavailable after its preq is deselected
                 selected.remove(m)
 
-    # Modules in same sets or same module in different term
+    # Modules in same set
     for s in selected:
         for m in modules:
             if s != m and s.term == m.term and s.set == m.set:
-                m.available = False
-            if s != m and s.code == m.code:
                 m.available = False
 
     # 5 per term and min 1, max 2 management
@@ -213,6 +215,13 @@ def availability():  # Check which module can be selected based on the rules
             if m.code[1] != "E" and m not in selected:
                 pass
                 m.available = False
+
+    # if one half of the double module is unavailable, then the other should not be selected either
+    for m in modules:
+        for n in modules:
+            if n.code == m.code:
+                n.available = n.available and m.available
+                m.available = n.available
 
 
 def qualifications():
